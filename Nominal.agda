@@ -242,7 +242,7 @@ module Terms
           → (a#t : Δ ⊢ a # t)
           → Δ ⊢ a # f $ t
 
-  #weaken : ∀ {Γ s} {Δ Δ' : Cxᶠ Γ} {a : Atom} {t : Term Γ s}
+  #weaken : ∀ {Γ s a} {Δ Δ' : Cxᶠ Γ} {t : Term Γ s}
           → Δ ⊆ Δ'
           → Δ ⊢ a # t
           → Δ' ⊢ a # t
@@ -277,6 +277,33 @@ module Terms
   a #? f $ t with a #? t
   ...| yes (Δ , a#t)                     = yes (Δ , #$ a#t)
   ...| no ¬a#t                           = no λ { (Δ , #$ a#t) → ¬a#t (Δ , a#t) }
+
+  -- Lemma 2.23 : freshness strengthening
+
+  -- Lemma 2.24 : permutation respects freshness
+
+  #permute : ∀ {Γ s a} {Δ : Cxᶠ Γ} {t : Term Γ s}
+           → (π : Permutation)
+           → Δ ⊢ a # t
+           → Δ ⊢ permute π a # π ∙ t
+  #permute π (#atom a≉b)          = #atom λ πa≈πb → a≉b (permute-injective π πa≈πb)
+  #permute π (#abs≡ a≈b)          = #abs≡ (cong (permute π) a≈b)
+  #permute π (#abs≢ a≉b a#t)      = #abs≢ (λ πa≈πb → a≉b (permute-injective π πa≈πb)) (#permute π a#t)
+  #permute π (#∷ δ₁ a#t₁ δ₂ a#t₂) = #∷ δ₁ (#permute π a#t₁) δ₂ (#permute π a#t₂)
+  #permute π (#$ a#t)             = #$ (#permute π a#t)
+  #permute {a = a} {Δ} π (#var {π = π'} {X = X} i)     = #var
+    ( subst (λ x → (x , proj₁ X , proj₂ X) ∈ Δ)
+      ( trans
+        (sym
+          (trans (cong (λ π → permute π a)
+            (trans (cong (λ π'' → π'' ∘ π) (∘⁻¹ π π'))
+              (∘assoc (π' ⁻¹) (π ⁻¹) π)))
+              (trans (∘permute (π' ⁻¹) ((π ⁻¹) ∘ π) a)
+                (cong-permute (π' ⁻¹)
+                  (permute⁻¹∘ π a)))))
+        (∘permute ((π ∘ π') ⁻¹) π a)
+      ) i
+    )
 
   open PropEq.≡-Reasoning
 
